@@ -1,0 +1,90 @@
+version: "3.3"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.37.9
+    user: root
+    container_name: monitor-prometheus
+    #ports:
+    #- 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    networks:
+      - internal
+      - web
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mon-prometheus-${INSTANCE_NAME}.entrypoints=web,websecure
+      - traefik.http.routers.mon-prometheus-${INSTANCE_NAME}.rule=Host(`${PR_TRAEFIK_ROUTER}`)
+      - traefik.http.routers.mon-prometheus-${INSTANCE_NAME}.tls=true
+      - traefik.http.routers.mon-prometheus-${INSTANCE_NAME}.tls.certresolver=le
+      - traefik.http.routers.mon-prometheus-${INSTANCE_NAME}.service=mon-prometheus-${INSTANCE_NAME}
+
+      - traefik.http.services.mon-prometheus-${INSTANCE_NAME}.loadbalancer.server.port=9090
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: monitor-grafana
+    #ports:
+    #- "3000:3000"
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+    networks:
+      - internal
+      - web
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mon-grafana-${INSTANCE_NAME}.entrypoints=web,websecure
+      - traefik.http.routers.mon-grafana-${INSTANCE_NAME}.rule=Host(`${GR_TRAEFIK_ROUTER}`)
+      - traefik.http.routers.mon-grafana-${INSTANCE_NAME}.tls=true
+      - traefik.http.routers.mon-grafana-${INSTANCE_NAME}.tls.certresolver=le
+      - traefik.http.routers.mon-grafana-${INSTANCE_NAME}.service=mon-grafana-${INSTANCE_NAME}
+
+      - traefik.http.services.mon-grafana-${INSTANCE_NAME}.loadbalancer.server.port=3000
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: monitor-node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    networks:
+      - internal
+      - web
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: monitor-cadvisor
+    # ports:
+      #- 8080:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: unless-stopped
+    networks:
+      - internal
+      - web
+networks:
+  internal:
+  web:
+    external: true
