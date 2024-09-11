@@ -84,7 +84,28 @@ services:
       - internal
       - web
   
-  
+  alertmanager:
+   image: quay.io/prometheus/alertmanager
+   container_name: monitor-alertmanager
+   restart: unless-stopped
+   volumes:
+    - ./alertmanager-data:/data
+    - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+   command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+   networks:
+    - internal
+    - web 
+   labels:
+      - traefik.enable=true
+      - traefik.http.routers.alertmanager-${INSTANCE_NAME}.entrypoints=web,websecure
+      - traefik.http.routers.alertmanager-${INSTANCE_NAME}.rule=Host(`${AM_TRAEFIK_ROUTER}`)
+      - traefik.http.routers.alertmanager-${INSTANCE_NAME}.tls=true
+      - traefik.http.routers.alertmanager-${INSTANCE_NAME}.tls.certresolver=le
+      - traefik.http.routers.alertmanager-${INSTANCE_NAME}.service=alertmanager-${INSTANCE_NAME}
+
+      - traefik.http.services.alertmanager-${INSTANCE_NAME}.loadbalancer.server.port=9093 
+
 networks:
   internal:
   web:
