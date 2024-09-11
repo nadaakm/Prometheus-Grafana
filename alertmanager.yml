@@ -1,0 +1,21 @@
+global:
+  # OVH SMTP server settings
+  smtp_smarthost: ''  # For STARTTLS (use port 465 for SSL)
+  smtp_from: ''     # The email address that will appear as the sender
+  smtp_auth_username: ''  # Your OVH email address
+  smtp_auth_password: ''       # Your OVH email password
+  smtp_require_tls: true  # Use TLS for secure communication
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: 'email-receiver'
+
+receivers:
+  - name: 'email-receiver'
+    email_configs:
+      - to: 'wafa.mimouni@sigservice-dz.com'  # Email where you want to send the alerts
+        send_resolved: true
+

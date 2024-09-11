@@ -1,0 +1,25 @@
+groups:
+  - name: docker_container_alerts
+    rules:
+      # Rule 1: Container High Memory Usage
+      - alert: ContainerHighMemoryUsage
+        expr: (sum(container_memory_working_set_bytes{name!=""}) BY (instance, name) / sum(container_spec_memory_limit_bytes > 0) BY (instance, name) * 100) > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+           summary: Container High Memory usage (instance {{ $labels.instance }})
+           description: "Container Memory usage is above 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      
+      # Rule 2: Container Killed
+      - alert: ContainerKilled
+        expr: time() - container_last_seen > 60
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Container killed (instance {{ $labels.instance }})
+          description: "A container has disappeared\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+
+  
